@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Game Hub</title>
+  <title>Game Hub - DuyKhanh</title>
   <style>
     body { margin:0; font-family: sans-serif; background:#222; color:#fff; }
     #menu, #loginForm, #registerForm, #editor, #gameCanvas, #gameList { display:none; }
@@ -11,14 +11,15 @@
     #editorCanvas { border:1px solid #fff; background:#444; width:600px; height:400px; position:relative; }
     .block { width:50px; height:50px; background:#0f0; position:absolute; cursor:move; }
     footer { position:fixed; bottom:10px; width:100%; text-align:center; color:#888; }
+    #gameCanvas { background:#000; width:600px; height:400px; display:block; margin:auto; }
   </style>
 </head>
 <body>
 <div id="menu">
   <h1>Game Hub</h1>
   <button onclick="startGame('default')">Play Default Game</button>
-  <button onclick="startGame('game1')">Play Game 1</button>
-  <button onclick="startGame('game2')">Play Game 2</button>
+  <button onclick="startGame('game1')">Play Game 1 (Maze Chase)</button>
+  <button onclick="startGame('game2')">Play Game 2 (Platform Jump)</button>
   <button onclick="showLogin()">Login</button>
   <button onclick="showRegister()">Register</button>
   <button onclick="playGuest()">Play as Guest</button>
@@ -56,16 +57,33 @@
   <button onclick="showMenu()">Back</button>
 </div>
 
-<canvas id="gameCanvas"></canvas>
+<canvas id="gameCanvas" width="600" height="400"></canvas>
 
-<footer>©DuyKhanh 2026</footer>
+<footer>© DuyKhanh 2026</footer>
 
 <script>
 function showMenu(){ hideAll(); document.getElementById("menu").style.display="flex"; }
 function startGame(which){
   hideAll();
-  document.getElementById("gameCanvas").style.display="block";
-  alert("Khởi động "+which+"!");
+  let canvas=document.getElementById("gameCanvas");
+  let ctx=canvas.getContext("2d");
+  canvas.style.display="block";
+  ctx.clearRect(0,0,600,400);
+
+  if(which==="game1"){ // Maze Chase
+    alert("Maze Chase bắt đầu!");
+    ctx.fillStyle="blue"; ctx.fillRect(50,50,30,30); // player
+    ctx.fillStyle="red"; ctx.fillRect(200,200,30,30); // enemy
+    ctx.strokeStyle="white"; ctx.strokeRect(100,100,400,200); // maze outline
+  } else if(which==="game2"){ // Platform Jump
+    alert("Platform Jump bắt đầu!");
+    ctx.fillStyle="green"; ctx.fillRect(100,350,100,20); // platform
+    ctx.fillStyle="green"; ctx.fillRect(300,250,100,20);
+    ctx.fillStyle="yellow"; ctx.fillRect(50,200,30,30); // player
+  } else {
+    alert("Game mặc định!");
+    ctx.fillStyle="cyan"; ctx.fillRect(250,150,100,100);
+  }
 }
 function showLogin(){ hideAll(); document.getElementById("loginForm").style.display="block"; }
 function showRegister(){ hideAll(); document.getElementById("registerForm").style.display="block"; }
@@ -79,6 +97,7 @@ function showGameList(){
     d.forEach(g=>{
       let li=document.createElement("li");
       li.textContent="Game "+g.id+": "+g.data;
+      li.onclick=function(){ loadGame(g.id); };
       ul.appendChild(li);
     });
   });
@@ -98,9 +117,7 @@ function doRegister(){
 function publishGame(){
   const blocks=document.querySelectorAll(".block");
   let data=[];
-  blocks.forEach(b=>{
-    data.push({x:b.offsetLeft,y:b.offsetTop});
-  });
+  blocks.forEach(b=>{ data.push({x:b.offsetLeft,y:b.offsetTop}); });
   fetch("/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data:data})})
     .then(r=>r.json()).then(d=>{ if(d.success){ alert("Game đã đăng lên server!"); showMenu(); } else alert("Lỗi đăng game"); });
 }
@@ -110,10 +127,21 @@ function addBlock(){
   block.className="block";
   block.style.left="10px"; block.style.top="10px";
   block.draggable=true;
-  block.ondragstart=function(e){ e.dataTransfer.setData("text/plain",null); window.dragBlock=block; };
+  block.ondragstart=function(e){ window.dragBlock=block; };
   canvas.appendChild(block);
   canvas.ondragover=function(e){ e.preventDefault(); };
   canvas.ondrop=function(e){ e.preventDefault(); let rect=canvas.getBoundingClientRect(); window.dragBlock.style.left=(e.clientX-rect.left-25)+"px"; window.dragBlock.style.top=(e.clientY-rect.top-25)+"px"; };
+}
+function loadGame(id){
+  fetch("/games/"+id).then(r=>r.json()).then(d=>{
+    hideAll();
+    let canvas=document.getElementById("gameCanvas");
+    let ctx=canvas.getContext("2d");
+    canvas.style.display="block";
+    ctx.clearRect(0,0,600,400);
+    ctx.fillStyle="orange";
+    d.data.forEach(block=>{ ctx.fillRect(block.x,block.y,50,50); });
+  });
 }
 function hideAll(){ ["menu","loginForm","registerForm","editor","gameCanvas","gameList"].forEach(id=>{ document.getElementById(id).style.display="none"; }); }
 showMenu();
