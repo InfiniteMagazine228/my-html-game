@@ -8,13 +8,17 @@
     #menu, #loginForm, #registerForm, #editor, #gameCanvas, #gameList { display:none; }
     #menu { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; }
     button { margin:10px; padding:15px 30px; font-size:18px; cursor:pointer; }
+    #editorCanvas { border:1px solid #fff; background:#444; width:600px; height:400px; position:relative; }
+    .block { width:50px; height:50px; background:#0f0; position:absolute; cursor:move; }
     footer { position:fixed; bottom:10px; width:100%; text-align:center; color:#888; }
   </style>
 </head>
 <body>
 <div id="menu">
   <h1>Game Hub</h1>
-  <button onclick="startGame()">Play</button>
+  <button onclick="startGame('default')">Play Default Game</button>
+  <button onclick="startGame('game1')">Play Game 1</button>
+  <button onclick="startGame('game2')">Play Game 2</button>
   <button onclick="showLogin()">Login</button>
   <button onclick="showRegister()">Register</button>
   <button onclick="playGuest()">Play as Guest</button>
@@ -39,8 +43,9 @@
 </div>
 
 <div id="editor">
-  <h2>Game Editor</h2>
-  <textarea id="gameData" rows="10" cols="40" placeholder="JSON map data"></textarea><br>
+  <h2>Game Editor (kéo thả block)</h2>
+  <div id="editorCanvas"></div>
+  <button onclick="addBlock()">Thêm block</button>
   <button onclick="publishGame()">Đăng game</button>
   <button onclick="showMenu()">Back</button>
 </div>
@@ -57,10 +62,14 @@
 
 <script>
 function showMenu(){ hideAll(); document.getElementById("menu").style.display="flex"; }
-function startGame(){ hideAll(); document.getElementById("gameCanvas").style.display="block"; alert("Khởi động game mặc định!"); }
+function startGame(which){
+  hideAll();
+  document.getElementById("gameCanvas").style.display="block";
+  alert("Khởi động "+which+"!");
+}
 function showLogin(){ hideAll(); document.getElementById("loginForm").style.display="block"; }
 function showRegister(){ hideAll(); document.getElementById("registerForm").style.display="block"; }
-function playGuest(){ alert("Chơi với tư cách khách!"); startGame(); }
+function playGuest(){ alert("Chơi với tư cách khách!"); startGame("guest"); }
 function openEditor(){ hideAll(); document.getElementById("editor").style.display="block"; }
 function showGameList(){
   hideAll();
@@ -78,18 +87,33 @@ function doLogin(){
   const u=document.getElementById("loginUser").value;
   const p=document.getElementById("loginPass").value;
   fetch("/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})})
-    .then(r=>r.json()).then(d=>{ if(d.success){ alert("Đăng nhập thành công!"); startGame(); } else alert("Sai tài khoản/mật khẩu"); });
+    .then(r=>r.json()).then(d=>{ if(d.success){ alert("Đăng nhập thành công!"); startGame("default"); } else alert("Sai tài khoản/mật khẩu"); });
 }
 function doRegister(){
   const u=document.getElementById("regUser").value;
   const p=document.getElementById("regPass").value;
   fetch("/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})})
-    .then(r=>r.json()).then(d=>{ if(d.success){ alert("Đăng ký thành công!"); startGame(); } else alert("Tên đã tồn tại"); });
+    .then(r=>r.json()).then(d=>{ if(d.success){ alert("Đăng ký thành công!"); startGame("default"); } else alert("Tên đã tồn tại"); });
 }
 function publishGame(){
-  const data=document.getElementById("gameData").value;
+  const blocks=document.querySelectorAll(".block");
+  let data=[];
+  blocks.forEach(b=>{
+    data.push({x:b.offsetLeft,y:b.offsetTop});
+  });
   fetch("/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data:data})})
     .then(r=>r.json()).then(d=>{ if(d.success){ alert("Game đã đăng lên server!"); showMenu(); } else alert("Lỗi đăng game"); });
+}
+function addBlock(){
+  let canvas=document.getElementById("editorCanvas");
+  let block=document.createElement("div");
+  block.className="block";
+  block.style.left="10px"; block.style.top="10px";
+  block.draggable=true;
+  block.ondragstart=function(e){ e.dataTransfer.setData("text/plain",null); window.dragBlock=block; };
+  canvas.appendChild(block);
+  canvas.ondragover=function(e){ e.preventDefault(); };
+  canvas.ondrop=function(e){ e.preventDefault(); let rect=canvas.getBoundingClientRect(); window.dragBlock.style.left=(e.clientX-rect.left-25)+"px"; window.dragBlock.style.top=(e.clientY-rect.top-25)+"px"; };
 }
 function hideAll(){ ["menu","loginForm","registerForm","editor","gameCanvas","gameList"].forEach(id=>{ document.getElementById(id).style.display="none"; }); }
 showMenu();
