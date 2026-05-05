@@ -1,11 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import sqlite3
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# DB setup
 def init_db():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
@@ -14,6 +13,10 @@ def init_db():
     conn.commit()
     conn.close()
 init_db()
+
+@app.route("/")
+def index():
+    return render_template("index.html")
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -43,12 +46,20 @@ def publish():
     data = request.json
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute("INSERT INTO games (data) VALUES (?)", (str(data),))
+    c.execute("INSERT INTO games (data) VALUES (?)", (data["data"],))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
 
-# Multiplayer demo
+@app.route("/games")
+def games():
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("SELECT id, data FROM games")
+    rows = [{"id":r[0],"data":r[1]} for r in c.fetchall()]
+    conn.close()
+    return jsonify(rows)
+
 players = {}
 @socketio.on("connect")
 def connect():
@@ -64,10 +75,6 @@ def move(pos):
 def disconnect():
     players.pop(request.sid, None)
     emit("update", players, broadcast=True)
-
-@app.route("/")
-def index():
-    return "Game Hub backend đang chạy!"
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000)
