@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
-import sqlite3
+import sqlite3, json
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -46,7 +46,8 @@ def publish():
     data = request.json
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
-    c.execute("INSERT INTO games (data) VALUES (?)", (data["data"],))
+    # lưu JSON block map
+    c.execute("INSERT INTO games (data) VALUES (?)", (json.dumps(data["data"]),))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
@@ -56,10 +57,22 @@ def games():
     conn = sqlite3.connect("users.db")
     c = conn.cursor()
     c.execute("SELECT id, data FROM games")
-    rows = [{"id":r[0],"data":r[1]} for r in c.fetchall()]
+    rows = [{"id":r[0],"data":json.loads(r[1])} for r in c.fetchall()]
     conn.close()
     return jsonify(rows)
 
+@app.route("/games/<int:gid>")
+def game_detail(gid):
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("SELECT data FROM games WHERE id=?", (gid,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return jsonify({"id":gid,"data":json.loads(row[0])})
+    return jsonify({"error":"not found"}),404
+
+# Multiplayer demo
 players = {}
 @socketio.on("connect")
 def connect():
