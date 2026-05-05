@@ -67,7 +67,7 @@ function startGame() {
   camera.position.set(0,5,15);
 
   // Socket.io kết nối server
-  socket = io("https://your-render-app.onrender.com"); // thay bằng URL Render của bạn
+  socket = io("https://my-html-game.onrender.com"); // thay bằng URL Render của bạn
   socket.on("update", (data) => {
     players = data;
   });
