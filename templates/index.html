@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Game Hub</title>
+  <style>
+    body { margin:0; font-family: sans-serif; background:#222; color:#fff; }
+    #menu, #loginForm, #registerForm, #editor, #gameCanvas { display:none; }
+    #menu { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; }
+    button { margin:10px; padding:15px 30px; font-size:18px; cursor:pointer; }
+  </style>
+</head>
+<body>
+<div id="menu">
+  <h1>Game Hub</h1>
+  <button onclick="startGame()">Play</button>
+  <button onclick="showLogin()">Login</button>
+  <button onclick="showRegister()">Register</button>
+  <button onclick="playGuest()">Play as Guest</button>
+  <button onclick="openEditor()">Game Editor</button>
+</div>
+
+<div id="loginForm">
+  <h2>Login</h2>
+  <input id="loginUser" placeholder="Username"><br>
+  <input id="loginPass" type="password" placeholder="Password"><br>
+  <button onclick="doLogin()">Submit</button>
+</div>
+
+<div id="registerForm">
+  <h2>Register</h2>
+  <input id="regUser" placeholder="Username"><br>
+  <input id="regPass" type="password" placeholder="Password"><br>
+  <button onclick="doRegister()">Submit</button>
+</div>
+
+<div id="editor">
+  <h2>Game Editor</h2>
+  <textarea id="gameData" rows="10" cols="40" placeholder="JSON map data"></textarea><br>
+  <button onclick="publishGame()">Đăng game</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+function showMenu(){
+  hideAll();
+  document.getElementById("menu").style.display="flex";
+}
+function startGame(){
+  hideAll();
+  document.getElementById("gameCanvas").style.display="block";
+  alert("Khởi động game mặc định!");
+}
+function showLogin(){
+  hideAll();
+  document.getElementById("loginForm").style.display="block";
+}
+function showRegister(){
+  hideAll();
+  document.getElementById("registerForm").style.display="block";
+}
+function playGuest(){
+  alert("Chơi với tư cách khách!");
+  startGame();
+}
+function openEditor(){
+  hideAll();
+  document.getElementById("editor").style.display="block";
+}
+function doLogin(){
+  const u = document.getElementById("loginUser").value;
+  const p = document.getElementById("loginPass").value;
+  fetch("/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})})
+    .then(r=>r.json()).then(d=>{
+      if(d.success){ alert("Đăng nhập thành công!"); startGame(); }
+      else alert("Sai tài khoản/mật khẩu");
+    });
+}
+function doRegister(){
+  const u = document.getElementById("regUser").value;
+  const p = document.getElementById("regPass").value;
+  fetch("/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p})})
+    .then(r=>r.json()).then(d=>{
+      if(d.success){ alert("Đăng ký thành công!"); startGame(); }
+      else alert("Tên đã tồn tại");
+    });
+}
+function publishGame(){
+  const data = document.getElementById("gameData").value;
+  fetch("/publish",{method:"POST",headers:{"Content-Type":"application/json"},body:data})
+    .then(r=>r.json()).then(d=>{
+      if(d.success){ alert("Game đã đăng lên server!"); showMenu(); }
+      else alert("Lỗi đăng game");
+    });
+}
+function hideAll(){
+  ["menu","loginForm","registerForm","editor","gameCanvas"].forEach(id=>{
+    document.getElementById(id).style.display="none";
+  });
+}
+showMenu();
+</script>
+</body>
+</html>
