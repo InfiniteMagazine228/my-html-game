@@ -2,40 +2,31 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Maze Chase 3D</title>
+  <title>Maze Chase 3D - FPS</title>
   <style>
-    body { margin: 0; font-family: sans-serif; background: #111; color: #eee; }
-    #menu {
-      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.8); z-index: 10;
-    }
-    #menu h1 { font-size: 48px; margin-bottom: 20px; color: #0f0; }
-    #menu button {
-      padding: 15px 30px; margin: 10px; font-size: 20px;
-      background: #0f0; border: none; cursor: pointer; border-radius: 8px;
-    }
-    #footer {
-      position: absolute; bottom: 10px; width: 100%; text-align: center;
-      font-size: 14px; color: #888;
+    body { margin: 0; overflow: hidden; }
+    #fpsCounter {
+      position: absolute; top: 10px; left: 10px;
+      color: #0f0; font-family: monospace; font-size: 16px;
+      background: rgba(0,0,0,0.5); padding: 5px; border-radius: 5px;
     }
   </style>
 </head>
 <body>
-<div id="menu">
-  <h1>Maze Chase 3D</h1>
-  <button onclick="startGame()">Bắt đầu chơi</button>
-</div>
-<div id="footer">© 2026 Hiền - All rights reserved</div>
+<div id="fpsCounter">FPS: 0</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/PointerLockControls.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-let scene, camera, renderer, player, socket, players = {};
+let scene, camera, renderer, controls, player, socket, players = {};
+let fpsCounter = document.getElementById("fpsCounter");
+let lastFrameTime = performance.now();
 
-function startGame() {
-  document.getElementById("menu").style.display = "none";
+init();
+animate();
 
+function init() {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
   renderer = new THREE.WebGLRenderer();
@@ -50,7 +41,7 @@ function startGame() {
   floor.rotation.x = -Math.PI/2;
   scene.add(floor);
 
-  // Tường mê cung
+  // Tường
   const wallGeo = new THREE.BoxGeometry(2, 4, 10);
   const wallMat = new THREE.MeshBasicMaterial({color: 0x00ff00});
   const wall = new THREE.Mesh(wallGeo, wallMat);
@@ -64,27 +55,31 @@ function startGame() {
   player.position.set(0,1,5);
   scene.add(player);
 
-  camera.position.set(0,5,15);
+  // Controls góc nhìn thứ nhất
+  controls = new THREE.PointerLockControls(camera, document.body);
+  document.body.addEventListener('click', () => controls.lock());
 
-  // Socket.io kết nối server
-  socket = io("https://my-html-game.onrender.com"); // thay bằng URL Render của bạn
-  socket.on("update", (data) => {
-    players = data;
+  // Socket.io kết nối Python backend
+  socket = io("https://my-html-game.onrender.com"); // thay bằng URL Flask-SocketIO của bạn
+  socket.on("update", (data) => { players = data; });
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
   });
-
-  document.addEventListener("keydown", (e) => {
-    if(e.key === "w") player.position.z -= 1;
-    if(e.key === "s") player.position.z += 1;
-    if(e.key === "a") player.position.x -= 1;
-    if(e.key === "d") player.position.x += 1;
-    socket.emit("move", {x:player.position.x, y:player.position.y, z:player.position.z});
-  });
-
-  animate();
 }
 
 function animate() {
   requestAnimationFrame(animate);
+
+  // FPS counter
+  let now = performance.now();
+  let delta = now - lastFrameTime;
+  lastFrameTime = now;
+  let fps = Math.round(1000 / delta);
+  fpsCounter.textContent = "FPS: " + fps;
+
   renderer.render(scene, camera);
 }
 </script>
